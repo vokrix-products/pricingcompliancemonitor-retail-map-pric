@@ -1,45 +1,92 @@
-# PricingComplianceMonitor (Retail MAP & Pricing Compliance Checker)
+# MAPGuard — Pricing Compliance Monitor (Backend Processing)
 
-Pure Python backend processing modules for extracting and classifying Minimum Advertised Price (MAP) compliance records from uploaded documents. This phase ships the processing core only; no HTTP server is included.
+Retail MAP & Pricing Compliance Checker that monitors reseller listings against
+Minimum Advertised Price (MAP) requirements and flags unauthorized or expired
+sellers.
+
+This repository contains the **backend processing module** — pure, file-based
+extraction and classification logic only. No HTTP server or dashboard is
+included in this phase; this is the processing core that downstream services
+(a poller/API/dashboard) will call.
 
 ## Archetype
-Rule-based extraction with graceful fallback:
-- Structured inputs (CSV, Excel) are parsed directly.
-- PDF and freeform text use pdfplumber text extraction, optional DeepSeek JSON extraction fallback, and embedded csv/JSON parsing.
-- Field aliases are normalized into canonical fields.
-- Each record is classified into one of four status values using URL presence, authorization end date, observed price vs MAP price, and unauthorized seller signals.
 
-## Poller Input Contract
-The poller (or calling service) must invoke:
-```
-from processor import process_file
-records = process_file(file_bytes)
-```
-`file_bytes` is the raw content of one uploaded file: PDF, XLSX, CSV, or plain text. The function returns a `list[dict]` with one object per detected product.
+- **Processor module** consuming raw file bytes and emitting normalized
+  compliance records.
+- Synchronous, stateless, self-contained functions.
+- Handles CSV fallback detection automatically (no manual format setup).
 
-Each returned record has this shape:
+## Input — what the poller feeds in
+
+`processor.process_file(file_bytes: bytes) -> list[dict]`
+
+The single entry point accepts the raw **bytes** of an uploaded file. Supported
+formats:
+
+| Format | Parser |
+|--------|--------|
+| PDF | `pdfplumber` text extraction |
+| Excel (`.xlsx`) | `openpyxl` first active sheet |
+| CSV / TSV / delimiter text | built-in `csv` parser (auto-detects comma, tab, semicolon, pipe) |
+| Plain text | optional DeepSeek extraction fallback |
+
+For CSV/tabular files the header row is matched flexibly against recognized
+aliases, e.g. `price`/`current_price`/`selling_price` → `observed_price`,
+`sku`/`mpn`/`upc`/`asin` → `product_id`, `channel`/`marketplace` → `retailer`.
+
+## Output
+
+Each returned record is a dict:
+
+```python
+{
+    "title": "Product Title",
+    "status": "Valid:good",
+    "details": {
+        "product_id": ...,
+        "product_title": ...,
+        "brand": ...,
+        "retailer": ...,
+        "product_url": ...,
+        "seller": ...,
+        "map_price": ...,
+        "msrp": ...,
+        "currency": ...,
+        "authorization_start_date": ...,
+        "authorization_end_date": ...,
+        "observed_price": ...,
+        "in_stock": ...,
+        "offer_block": ...,
+        "uploaded_file_name": ...
+    },
+    "due_date": "2024-12-31"
+}
 ```
-{"title": "...", "status": "Valid:good", "details": {...}, "due_date": "2025-04-01"}
-```
-- `title`: normalized product title or "Unnamed Product"
-- `status`: compliance classification below
-- `details`: canonical normalized fields (product_id, product_title, brand, retailer, product_url, seller, map_price, msrp, currency, authorization dates, observed_price, in_stock, offer_block, uploaded_file_name)
-- `due_date`: ISO authorization end date, or null
 
 ## Status Values
-- `Missing:critical` - listing URL absent
-- `Expired:warning` - authorization ended before today
-- `Valid:good` - pricing meets MAP
-- `Flagged:critical` - observed price below MAP or unauthorized seller
+
+| Status | Meaning |
+|--------|---------|
+| `Missing:critical` | No product URL / insufficient data to assess |
+| `Expired:warning` | Authorization end date has passed |
+| `Valid:good` | Seller authorized and price at/above MAP |
+| `Flagged:critical` | Unauthorized seller or observed price below MAP |
 
 ## Files
-- `processor.py` - `process_file(file_bytes: bytes) -> list[dict]`
-- `run_demo.py` - hardcoded CSV demo
-- `run_tests.py` - CSV, key-shape, status, and Excel tests
+
+- `processor.py` — `process_file(file_bytes: bytes) -> list[dict]`
+- `run_demo.py` — zero-argument demo with hardcoded CSV test data
+- `run_tests.py` — basic self-contained tests
 
 ## Install
-```
+
+```bash
 pip install -r requirements.txt
+```
+
+## Run
+
+```bash
 python3 run_demo.py
 python3 run_tests.py
 ```
