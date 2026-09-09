@@ -92,3 +92,5 @@ python3 run_tests.py
 ```
 Railway: pricingcompliancemonitor-retail-map-pric
 Cloudflare: pricingcompliancemonitor-retail-map-pric.vokrix.co
+
+Billing: price_1UDlPH2c9uGCcgMSccYJkry8
