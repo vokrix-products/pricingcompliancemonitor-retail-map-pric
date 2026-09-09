@@ -91,3 +91,4 @@ python3 run_demo.py
 python3 run_tests.py
 ```
 Railway: pricingcompliancemonitor-retail-map-pric
+Cloudflare: pricingcompliancemonitor-retail-map-pric.vokrix.co
