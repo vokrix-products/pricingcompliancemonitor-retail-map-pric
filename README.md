@@ -94,3 +94,5 @@ Railway: pricingcompliancemonitor-retail-map-pric
 Cloudflare: pricingcompliancemonitor-retail-map-pric.vokrix.co
 
 Billing: price_1UDlPH2c9uGCcgMSccYJkry8
+
+Landing: https://vokrix.co/pricingcompliancemonitor-retail-map-pric
