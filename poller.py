@@ -105,6 +105,13 @@ def process_job(job):
             }
         )
 
+    for r in records:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/records",
+            headers={"Authorization": f"Bearer {SUPABASE_SERVICE_KEY}", "apikey": SUPABASE_SERVICE_KEY, "Content-Type": "application/json", "Prefer": "return=minimal"},
+            json=r
+        )
+
     result_payload = json.dumps({"records": records}, default=str).encode("utf-8")
     object_name = f"{job_id}_{int(time.time())}.json"
     uploaded_path = upload_result("results", object_name, result_payload)
@@ -164,3 +171,4 @@ def poll():
 if __name__ == "__main__":
     print("Poller started")
     poll()
+
